@@ -1,0 +1,39 @@
+----------------------------------------------------------------
+ Ace pyrotag pipeline...
+
+ Copyright (C) 2011 Michael Imelfort
+    
+ This program comes with ABSOLUTELY NO WARRANTY;
+ This is free software, and you are welcome to redistribute it
+ under certain conditions: See the source for more details.
+
+----------------------------------------------------------------
+
+This is a collection of PERL wrappers which wrap QIIME. uclust and acacia
+to perform basic QA and results analysis for 16S rRNA pyrotag datasets
+
+Also contained in this package is a set of scripts for taking information generated
+using PyroDB and doing a number of useful things such as sorting reads into folders
+and generating csv files for dilition using an epi pipette robot.
+
+----------------------------------------------------------------
+ -- OVERVIEW OF FILES
+----------------------------------------------------------------
+./
+app_convert.pl                                  # CONVERT A CALIPER PRODUCED PEAKS CSV FILE INTO APP CONCENTRATION FORMAT
+app_csv2epi.pl                                  # CONVERT AN APP CONCENTRATION CSV FILE INTO A FORMAT SUITABLE FOR THE EPI PIPETTE ROBOT
+
+app_munge_sff.pl                                # SPLIT AN SFF FILE INTO JOB FOLDERS
+
+app_do_QA.pl                                    # DENOISE AND DE-CHIME A SET OF RAW READS
+app_combine.pl                                  # COMBINE SAMPLES FROM MULTIPLE JOBS
+app_make_results.pl                             # RUN THE QIIME PIPELINE
+app_make_images.pl				# DO PCA etc. AND MAKE IMAGES
+
+app_normalise_reads.pl                          # TAKE A SUBSET OF READS IN A FILE
+app_acacia.config				# DEFAULT CONFIG FOR RUNNING ACACIA
+README						# THIS FILE
+
+./lib
+AppConfig.pm					# COMMON ROUTINES AND MANY DEFAULT PARAMETERS
+
