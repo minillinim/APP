@@ -6,6 +6,9 @@
 #    Make purdy looking images using results from APP
 #
 #    Copyright (C) 2011 Michael Imelfort and Paul Dennis
+#    Other contributers:
+#
+#       Candice Heath - Heatmap code
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -61,7 +64,9 @@ $global_R_instance->start();
 
 getWorkingDirs($options->{'config'});
 
-makeImageDirs(0);
+# make a directory for the R log to be placed
+makeImageDirs();
+open my $r_log_fh, ">", $global_R_log_file or die $!;
 
 # sample IDs
 my %global_samp_ID_list = ();
@@ -74,11 +79,8 @@ my %global_heat_map_list = ();
 # nice names for the OTUs
 my %global_otu_nice_names_list = ();
 
-# we need to modify these files
-my $global_tn_modified = modify_otu($tn_otu_table_file, $global_TB_results_dir);
-$global_otu_nice_names_list{$global_tn_modified} = "$global_TB_results_dir/$tn_prefix"."_hellinger_otu_table";
-$global_otu_nice_names_list{$tn_otu_table_file} = "$global_TB_results_dir/$tn_prefix"."_otu_table";
-
+# we need to modify some of the main otu tables
+my $global_tn_modified;
 my $global_sn_modified;
 
 my %allowable_trans_types = ('weighted_unifrac' => 1,
@@ -98,26 +100,27 @@ print "Checking if all the config checks out...\t\t";
 parse_config_images();
 print "All good!\n";
 
-# make a list of all the analyses we'll need to do
-#### TABLE NORM IMAGES
-
-$global_otu_table_list{ $global_tn_modified } = $global_TB_results_dir;
+# make lists of all the analyses we'll need to do
 
 # always do these guys
 my @otu_search_dirs = ("$global_TB_results_dir/beta_diversity/$nn_prefix/", "$global_TB_results_dir/beta_diversity/$tn_prefix/");
 my @hm_search_dirs = ("$global_TB_results_dir/breakdown_by_taxonomy");
 
+#### TABLE NORM IMAGES
+$global_tn_modified = modify_otu($tn_otu_table_file, $global_TB_results_dir);
+
+$global_otu_nice_names_list{ $global_tn_modified } = "$global_TB_results_dir/$tn_prefix"."_otu_table";
+$global_otu_table_list{ $global_tn_modified } = $global_TB_results_dir;
+
 #### SEQ NORM IMAGES IF NEEDED
 if($global_norm_style eq "SEQ")
 {
-    # make the seq processing dir if we need to
-    makeImageDirs(1);
-    
     # add OTU table files
     $global_sn_modified = modify_otu($sn_otu_table_file, $global_SB_results_dir);
-    $global_otu_nice_names_list{$global_sn_modified} = "$global_SB_results_dir/$sn_prefix"."_hellinger_otu_table";
-    $global_otu_nice_names_list{$sn_otu_table_file} = "$global_SB_results_dir/$sn_prefix"."_otu_table";
+
+    $global_otu_nice_names_list{ $global_sn_modified } = "$global_SB_results_dir/$sn_prefix"."_otu_table";
     $global_otu_table_list{ $global_sn_modified } = $global_SB_results_dir;
+
     push @otu_search_dirs, "$global_SB_results_dir/beta_diversity/";
     
     # now do heatmaps
@@ -152,9 +155,12 @@ foreach my $this_otu (keys %global_otu_table_list)
 }
 
 # now do the two hellinger types on the normalised otu tables
+$global_otu_nice_names_list{$global_tn_modified} = "$global_TB_results_dir/$tn_prefix"."_hellinger_otu_table";
 make_otu_images($global_tn_modified, $global_TB_results_dir, 1);
+
 if($global_norm_style eq "SEQ")
 {
+    $global_otu_nice_names_list{ $global_sn_modified } = "$global_SB_results_dir/$sn_prefix"."_hellinger_otu_table";
     make_otu_images($global_sn_modified, $global_SB_results_dir, 1);
 }
 print "\n";
@@ -173,7 +179,10 @@ foreach my $base_dir (@hm_search_dirs)
         make_heatmap_images($tt_m);        
     }
 }
+
+close $r_log_fh;
 print "\nDone!\n";
+
 ######################################################################
 # CUSTOM SUBS
 ######################################################################
@@ -245,28 +254,41 @@ sub make_heatmap_images
     my $hm_svg = $neat_name.".svg";
     my $hm_pdf = $neat_name.".pdf";
     
+    print $r_log_fh "###############################################\n"; 
+    print $r_log_fh "###############################################\n";
+    print $r_log_fh " # Code for making heatmap: $neat_name\n"; 
+    print $r_log_fh "###############################################\n"; 
+    print $r_log_fh "###############################################\n\n"; 
+    
     # shorten file names by setting the wd
-    $global_R_instance->run(qq`start_dir <- getwd()`);
-    $global_R_instance->run(qq`setwd("$nice_dir")`);
+    print $r_log_fh " # Save the current working directory\n"; 
+    my $R_cmd = "start_dir <- getwd()";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "setwd(\"$nice_dir\")";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
     
-    $global_R_instance->run(qq`library (lattice)`);
-    $global_R_instance->run(qq`time<-read.table("$otu_table",header=TRUE,row.names=1,sep="\\t")`);
-    $global_R_instance->run(qq`t(time)->time`);
+    print $r_log_fh " # Load the data\n"; 
+    $R_cmd = "library (lattice)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "time<-read.table(\"$otu_table\",header=TRUE,row.names=1,sep=\"\\t\")";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "t(time)->time";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
     
-    $global_R_instance->run(qq`pdf(file='$hm_pdf', height=6, width=6, onefile=TRUE, family='Helvetica', paper='letter', pointsize=12)`);
-    $global_R_instance->run(qq`levelplot (time)`);
-    $global_R_instance->run(qq`col.1<-colorRampPalette(c("white","grey","yellow","red"))(30)`);
-    $global_R_instance->run(qq`levelplot (time, col.regions=col.1)`);
-    $global_R_instance->run(qq`dev.off()`);
+    print $r_log_fh " # Make a pdf image\n"; 
+    $R_cmd = "pdf(file='$hm_pdf', height=6, width=6, onefile=TRUE, family='Helvetica', paper='letter', pointsize=12)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "levelplot (time)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "col.1<-colorRampPalette(c(\"white\",\"grey\",\"yellow\",\"red\"))(30)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "levelplot (time, col.regions=col.1)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "dev.off()";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
 
-    $global_R_instance->run(qq`svg(filename='$hm_svg', height=6, width=6)`); 
-    $global_R_instance->run(qq`levelplot (time)`);
-    $global_R_instance->run(qq`col.1<-colorRampPalette(c("white","grey","yellow","red"))(30)`);
-    $global_R_instance->run(qq`levelplot (time, col.regions=col.1)`);
-    $global_R_instance->run(qq`dev.off()`);
+    print $r_log_fh " # Make a svg image\n"; 
+    $R_cmd = "svg(filename='$hm_svg', height=6, width=6)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd); 
+    $R_cmd = "levelplot (time)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "col.1<-colorRampPalette(c(\"white\",\"grey\",\"yellow\",\"red\"))(30)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "levelplot (time, col.regions=col.1)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "dev.off()";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
         
     # put back the working directory before we leave
-    $global_R_instance->run(qq`setwd(start_dir)`);
+    print $r_log_fh " # Reset the working directory\n"; 
+    $R_cmd = "setwd(start_dir)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    
+    print $r_log_fh "\n\n"; 
 }
 
 sub make_otu_images
@@ -277,32 +299,15 @@ sub make_otu_images
     my($table, $working_dir, $hellinger) = @_;
     
     print ".";
-    
-    # before we start, get the current working directory
-    $global_R_instance->run(qq`start_dir <- getwd()`);
-    
+
     # make sure there a a blank line at the end of the file
-    #`echo "\n" >> $table`;
-    # remove any blank lines
-    #`sed -i -e "/^\$/d" $table`;
-    
-    $global_R_instance->run(qq`library(vegan)`);
-    $global_R_instance->run(qq`read.table("$table",header=TRUE,row.names=1)->tb.tmp`);
-    if(1 == $hellinger)
-    {
-        $global_R_instance->run(qq`t(tb.tmp)->tb`);
-    }
-    else
-    {   
-        $global_R_instance->run(qq`t(sqrt(tb.tmp))->tb`);
-    }
+    `echo "\n" >> $table`;
+     # remove any blank lines
+    `sed -i -e "/^\$/d" $table`;
     
     # get the pretty name for this table
     my $nice_name = $global_otu_nice_names_list{$table};
     my $nice_dir = dirname($nice_name);
-    
-    # shorten file names by setting the wd
-    $global_R_instance->run(qq`setwd("$nice_dir")`);
     
     # get the name and title
     $nice_name = basename($nice_name);
@@ -314,50 +319,85 @@ sub make_otu_images
     $nice_name =~ s/non_normalised/nn/;
     $nice_name =~ s/sequence_normalised/sn/;
     $nice_name =~ s/table_normalised/tn/;
-   
-    # PCA - get associated data and figures
     
-    $global_R_instance->run(qq`rda(tb)->tb.pca`);
+    print $r_log_fh "###############################################\n"; 
+    print $r_log_fh "###############################################\n";
+    print $r_log_fh " # Code for making PCA, NMDS and CLUSTER plots:\n"; 
+    print $r_log_fh " # $nice_name\n"; 
+    print $r_log_fh "###############################################\n"; 
+    print $r_log_fh "###############################################\n\n"; 
+    
+    # before we start, get the current working directory
+    print $r_log_fh " # Save the current working directory\n"; 
+    my $R_cmd = "start_dir <- getwd()";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    # shorten file names by setting the wd
+    $R_cmd = "setwd(\"$nice_dir\")";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+      
+    print $r_log_fh " # Load the data\n";   
+    $R_cmd = "library(vegan)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "read.table(\"$table\",header=TRUE,row.names=1)->tb.tmp";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    if(0 == $hellinger)
+    {
+        $R_cmd = "t(tb.tmp)->tb";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    }
+    else
+    {   
+        $R_cmd = "t(sqrt(tb.tmp))->tb";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    }
+    
+    # PCA - get associated data and figures
+    print $r_log_fh " #### PCA...\n";   
+    $R_cmd = "rda(tb)->tb.pca";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
     
     my $species_file = $nice_name.".pca_species.scores.txt";
     my $sites_file = $nice_name.".pca_sites.scores.txt";
-    $global_R_instance->run(qq`tmp_sc <- scores(tb.pca)`);
-    $global_R_instance->run(qq`write.table(tmp_sc\$sites, "$sites_file")`);
-    $global_R_instance->run(qq`write.table(tmp_sc\$species, "$species_file")`);
+    $R_cmd = "tmp_sc <- scores(tb.pca)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    
+    print $r_log_fh " # Write tables to file\n"; 
+    $R_cmd = "write.table(tmp_sc\$sites, \"$sites_file\")";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "write.table(tmp_sc\$species, \"$species_file\")";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
     
     my $pca_pdf = $nice_name.".pca.pdf";
     my $pca_svg = $nice_name.".pca.svg";
     
     my $pca_title = $nice_title.".pca";
+        
+    print $r_log_fh " # Make a pdf image\n"; 
+    $R_cmd = "pdf(file='$pca_pdf', height=6, width=6, onefile=TRUE, family='Helvetica', paper='letter', pointsize=12)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "plot(tb.pca,type='t',scaling=3,main='$pca_title')";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "dev.off()";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
     
-    $global_R_instance->run(qq`pdf(file='$pca_pdf', height=6, width=6, onefile=TRUE, family='Helvetica', paper='letter', pointsize=12)`);
-    $global_R_instance->run(qq`plot(tb.pca,type='t',scaling=3,main='$pca_title')`);
-    $global_R_instance->run(qq`dev.off()`);
-    $global_R_instance->run(qq`svg(filename='$pca_svg', height=6, width=6)`); 
-    $global_R_instance->run(qq`plot(tb.pca,main='$pca_title')`);
-    $global_R_instance->run(qq`dev.off()`);
+    print $r_log_fh " # Make a svg image\n"; 
+    $R_cmd = "svg(filename='$pca_svg', height=6, width=6)";     print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "plot(tb.pca,main='$pca_title')";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "dev.off()";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
     
     # NMDS
-    
-    $global_R_instance->run(qq`metaMDS(tb,distance='euclidean')->tb.nmds`);
+    print $r_log_fh " #### NMDS...\n";   
+    $R_cmd = "metaMDS(tb,distance='euclidean')->tb.nmds";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
 
     my $nmds_file = $nice_name.".nmds.txt";
     my $nmds_scores_file = $nice_name.".nmds.scores.txt";
-    #$global_R_instance->run(qq`write.table(tb.nmds, "$nmds_scores_file")`);
-    $global_R_instance->run(qq`tmp_sc <- scores(tb.nmds)`);
-    $global_R_instance->run(qq`write.table(tmp_sc, "$nmds_scores_file")`);
+
+    print $r_log_fh " # Write tables to file\n";   
+    #$R_cmd = "write.table(tb.nmds, \"$nmds_scores_file\")";
+    $R_cmd = "tmp_sc <- scores(tb.nmds)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "write.table(tmp_sc, \"$nmds_scores_file\")";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
 
     my $nmds_pdf = $nice_name.".nmds.pdf";
     my $nmds_svg = $nice_name.".nmds.svg";
     
     my $nmds_title = $nice_title.".nmds";
     
-    $global_R_instance->run(qq`pdf(file='$nmds_pdf', height=6, width=6, onefile=TRUE, family='Helvetica', paper='letter', pointsize=12)`);
-    $global_R_instance->run(qq`plot(tb.nmds,type='t',main='$nmds_title')`);
-    $global_R_instance->run(qq`dev.off()`);
-    $global_R_instance->run(qq`svg(filename='$nmds_svg', height=6, width=6)`);
-    $global_R_instance->run(qq`plot(tb.nmds,type='t',main='$nmds_title')`);
-    $global_R_instance->run(qq`dev.off()`);
+    print $r_log_fh " # Make a pdf image\n"; 
+    $R_cmd = "pdf(file='$nmds_pdf', height=6, width=6, onefile=TRUE, family='Helvetica', paper='letter', pointsize=12)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "plot(tb.nmds,type='t',main='$nmds_title')";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "dev.off()";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    
+    print $r_log_fh " # Make a svg image\n"; 
+    $R_cmd = "svg(filename='$nmds_svg', height=6, width=6)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "plot(tb.nmds,type='t',main='$nmds_title')";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "dev.off()";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
         
     # Hierarchical clustering
     
@@ -365,18 +405,26 @@ sub make_otu_images
     my $clust_svg = $nice_name.".clust.svg";
     my $clust_title = $nice_title.": Hierarchical complete linkage clustering";
 
-    $global_R_instance->run(qq`tb_clust <- hclust((vegdist(tb,method='euclidean')),method='complete')`);
-    $global_R_instance->run(qq`pdf(file='$clust_pdf', height=6, width=6, onefile=TRUE, family='Helvetica', paper='letter', pointsize=12)`);
-    $global_R_instance->run(qq`plot(tb_clust,main='$nice_title')`);
-    $global_R_instance->run(qq`dev.off()`);
-    $global_R_instance->run(qq`svg(filename='$clust_svg', height=6, width=6)`); 
-    $global_R_instance->run(qq`plot(tb_clust,main='$nice_title')`);
-    $global_R_instance->run(qq`dev.off()`);
+    print $r_log_fh " #### Heirarchical clustering...\n";   
+    $R_cmd = "tb_clust <- hclust((vegdist(tb,method='euclidean')),method='complete')";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+
+    print $r_log_fh " # Make a pdf image\n"; 
+    $R_cmd = "pdf(file='$clust_pdf', height=6, width=6, onefile=TRUE, family='Helvetica', paper='letter', pointsize=12)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "plot(tb_clust,main='$nice_title')";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "dev.off()";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+
+    print $r_log_fh " # Make a svg image\n"; 
+    $R_cmd = "svg(filename='$clust_svg', height=6, width=6)";     print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "plot(tb_clust,main='$nice_title')";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    $R_cmd = "dev.off()";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
     
     # put back the working directory before we leave
-    $global_R_instance->run(qq`setwd(start_dir)`);
+    print $r_log_fh " # Reset the working directory\n"; 
+    $R_cmd = "setwd(start_dir)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
     
     # done!
+    print $r_log_fh "\n\n"; 
+    
 }
 
 sub parse_config_images
@@ -461,6 +509,8 @@ print<<"EOF";
 ---------------------------------------------------------------- 
  $0
  Copyright (C) 2011 Michael Imelfort and Paul Dennis
+ 
+   With special guest... Candice Heath!
     
  This program comes with ABSOLUTELY NO WARRANTY;
  This is free software, and you are welcome to redistribute it

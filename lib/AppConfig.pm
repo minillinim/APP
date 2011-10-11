@@ -53,6 +53,7 @@ our @EXPORT=qw(
     $global_QA_dir
     $global_processing_dir
     $global_results_dir
+    $global_image_dir
     $global_TB_processing_dir
     $global_SB_processing_dir
     $global_TB_results_dir
@@ -80,6 +81,7 @@ our @EXPORT=qw(
     $QIIME_TAX_blast_file
     $QIIME_map_file
     $QIIME_imputed_file 
+    $global_R_log_file
     getWorkingDirs 
     makeOutputDirs 
     makeResultsDirs
@@ -161,7 +163,7 @@ our $global_mapping_file = "UNSET";
 #
 # We use a number of config files which are located all over the place. Just in case we move them., we can store them here...
 #
-our $global_acacia_config = "/srv/whitlam/bio/apps/sw/app/beta/app_acacia.config";
+our $global_acacia_config = "/srv/whitlam/bio/apps/sw/app/APP/app_acacia.config";
 our $global_barcode_length = "variable_length";
 
 #
@@ -193,6 +195,7 @@ our %global_acacia_counts = ();
 our $global_QA_dir = "UNSET";
 our $global_processing_dir = "UNSET";
 our $global_results_dir = "UNSET";
+our $global_image_dir = "UNSET";
 
 #### PROCESSING DIRS
 our $global_TB_processing_dir = "UNSET";
@@ -225,11 +228,9 @@ our $sn_otu_table_file = "UNSET";
 our $sn_otus_file = $sn_prefix."UNSET";
 our $sn_tree_file = "UNSET";
 
-#### DIRS made by app_make_images.pl
+#### made by app_make_images.pl
 
-our $global_TB_results_dir = "UNSET";
-our $global_SB_results_dir = "UNSET";
-
+our $global_R_log_file = "UNSET";
 
 ######################################################################
 # SHARED SUBS
@@ -263,6 +264,7 @@ sub getWorkingDirs
     $global_QA_dir = "$global_working_dir/$QA_dir";
     $global_processing_dir = "$global_working_dir/$proc_dir";
     $global_results_dir = "$global_working_dir/$res_dir";
+    $global_image_dir = "$global_working_dir/$image_dir";
     $global_TB_processing_dir = "$global_processing_dir/table_based";
     $global_SB_processing_dir = "$global_processing_dir/sequence_based";
     $global_TB_results_dir = "$global_results_dir/table_based";
@@ -320,10 +322,8 @@ sub makeImageDirs
     #-----
     # Make directories needed by app_make_images.pl
     #
-    my ($do_sb) = @_;
-    if(1 == $do_sb)
-    {
-    }     
+    `mkdir -p $global_image_dir`;
+    $global_R_log_file = $global_image_dir."/R.log"; 
 }
 
 sub splitLibraries
