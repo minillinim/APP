@@ -195,10 +195,7 @@ sub modify_otu
     #
     my ($otu_table, $working_dir) = @_;
     my $ret_table = $otu_table.".modified";
-    if(! -e  $ret_table)
-    {
-        `sed -e "s/#rar.*//" -e "s/#OTU ID//" -e "/^\$/d" -e "s/\\t[^\\t]*\$//" $otu_table > $ret_table`;
-    }
+    `sed -e "s/#rar.*//" -e "s/#OTU ID//" -e "/^\$/d" -e "s/\\t[^\\t]*\$//" $otu_table > $ret_table`;
     return $ret_table; 
 }
 
@@ -267,7 +264,8 @@ sub make_heatmap_images
     
     print $r_log_fh " # Load the data\n"; 
     $R_cmd = "library (lattice)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
-    $R_cmd = "time<-read.table(\"$otu_table\",header=TRUE,row.names=1,sep=\"\\t\")";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    my $otu_table_file = basename($otu_table);
+    $R_cmd = "time<-read.table(\"$otu_table_file\",header=TRUE,row.names=1,sep=\"\\t\")";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
     $R_cmd = "t(time)->time";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
     
     print $r_log_fh " # Make a pdf image\n"; 
@@ -335,7 +333,8 @@ sub make_otu_images
       
     print $r_log_fh " # Load the data\n";   
     $R_cmd = "library(vegan)";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
-    $R_cmd = "read.table(\"$table\",header=TRUE,row.names=1)->tb.tmp";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
+    my $table_file = basename($table);
+    $R_cmd = "read.table(\"$table_file\",header=TRUE,row.names=1)->tb.tmp";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);
     if(0 == $hellinger)
     {
         $R_cmd = "t(tb.tmp)->tb";    print $r_log_fh "$R_cmd\n";    $global_R_instance->run($R_cmd);

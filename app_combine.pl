@@ -70,6 +70,7 @@ if(exists $options->{'output'})
 {
     $global_combined_base = $options->{'output'};
 }
+$global_combined_base =~ s/\/$//;
 
 # acacia config file
 if(exists $options->{'acacia_conf'})
@@ -139,6 +140,7 @@ makeOutputDirs("/$global_combined_base");
 
 # make some files to write to
 open my $global_fna_out_fh, ">", "$global_combined_base/$QA_dir/$QIIME_split_out" or die $!;
+open my $global_qual_out_fh, ">", "$global_combined_base/$QA_dir/$QIIME_split_out_qual" or die $!;
 open my $global_qimme_mapping_file_fh, ">", "$global_combined_base/$QA_dir/$QIIME_map_file" or die $!;
 print $global_qimme_mapping_file_fh "$FNB_HEADER\n";
 
@@ -150,13 +152,14 @@ foreach my $job (keys %global_job_list)
 }
 
 close $global_fna_out_fh;
+close $global_qual_out_fh;
 close $global_qimme_mapping_file_fh;
 
 print "----------------------------------------------------------------\n";
 
 # make the config environment
 print "Making the config file\n";
-open my $new_conf_fh, ">", "$global_combined_base/app_$global_combined_base.config" or die $!;
+open my $new_conf_fh, ">", "$global_combined_base/app_".$global_combined_base.".config" or die "$!: $global_combined_base\n" ;
 print $new_conf_fh "$FNA_HEADER\n";
 
 foreach my $job (keys %global_job_list)
@@ -202,6 +205,7 @@ sub recombine_fnas
     
     my ($job_ID) = @_;
     my $split_fasta = "$job_ID/$QA_dir/$QIIME_split_out";
+    my $split_qual = "$job_ID/$QA_dir/$QIIME_split_out_qual";
     my $mapping_file = "$job_ID/$QA_dir/$QIIME_map_file";
     print "Processing: $split_fasta...\t\t";
 
@@ -210,6 +214,8 @@ sub recombine_fnas
     # make a mapping file
     my $conf_file = "$job_ID/app_".$job_ID.".config";
     open my $c_fh, "<", $conf_file or die $!;
+    # make this dir if it doesn't exist
+    `mkdir -p $job_ID/$QA_dir`;
     open my $map_fh, ">", $mapping_file  or die $!;
     print $map_fh $FNB_HEADER."\n";
     while(<$c_fh>)
@@ -230,21 +236,27 @@ sub recombine_fnas
     
     # first we see if a raw file exists
     # make one if it doesn't
-    if(! -e $split_fasta)
-    {
+    #if(! -e $split_fasta)
+    #{
         my $c_dir = `pwd`;
         chomp $c_dir;
         chdir("$job_ID/$QA_dir");
         splitLibraries($job_ID);
         chdir($c_dir);
-    }
+    #}
 
     # open the raw file
     open my $fna_fh, "<", $split_fasta  or die $!;
+    open my $qual_fh, "<", $split_qual  or die $!;
     while(<$fna_fh>)
     {
+        # for the sequence
         my $header = $_;
         my $seq = <$fna_fh>;
+        
+        # for the qual
+        my $qual_header = <$qual_fh>;
+        my $qual_val = <$qual_fh>;
         
         # split on ">"
         my @tmp_1 = split />/, $_;
@@ -259,9 +271,12 @@ sub recombine_fnas
         {
             print $global_fna_out_fh $header;
             print $global_fna_out_fh $seq;
+            print $global_qual_out_fh $qual_header;
+            print $global_qual_out_fh $qual_val;            
         }
     }
     close $fna_fh;
+    close $qual_fh;
     
     print "Done\n";
 }
