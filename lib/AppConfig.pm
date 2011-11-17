@@ -34,6 +34,7 @@ our @EXPORT=qw(
     $FNA_HEADER 
     $FNA_LINE_FINISHER 
     $FNA_FOOTER 
+    $FNA_SILVA_FOOTER
     $APP_ROOT 
     $APP_RAW 
     $APP_BYJOB 
@@ -82,6 +83,9 @@ our @EXPORT=qw(
     $QIIME_TAX_blast_file
     $QIIME_map_file
     $QIIME_imputed_file 
+    $SILVA_TAX_tax_file
+    $SILVA_TAX_blast_file
+    $SILVA_imputed_file 
     $global_R_log_file
     getWorkingDirs 
     makeOutputDirs 
@@ -125,6 +129,14 @@ our $FNA_LINE_FINISHER = "\tXX\tXX\tXX\t1\n";
 our $FNA_FOOTER = "@@\
 NORMALISE=\
 DB=0\
+MUL_RARE_M=\
+MUL_RARE_X=\
+MUL_RARE_S=\
+MUL_RARE_N=";
+
+our $FNA_SILVA_FOOTER = "@@\
+NORMALISE=\
+DB=SILVA\
 MUL_RARE_M=\
 MUL_RARE_X=\
 MUL_RARE_S=\
@@ -176,6 +188,9 @@ our $QIIME_split_out_qual = "seqs_filtered.qual";
 our $QIIME_TAX_tax_file = "/srv/whitlam/bio/db/gg/qiime_default/gg_otus_6oct2010/taxonomies/otu_id_to_greengenes.txt";
 our $QIIME_TAX_blast_file = "/srv/whitlam/bio/db/gg/qiime_default/gg_otus_6oct2010/rep_set/gg_97_otus_6oct2010.fasta";
 our $QIIME_imputed_file = "/srv/whitlam/bio/db/gg/qiime_default/core_set_aligned.fasta.imputed";
+our $SILVA_TAX_tax_file = "/srv/whitlam/bio/db/Silva/QIIME_files/taxonomy_mapping/Silva_taxa_mapping_104set_97_otus.txt";
+our $SILVA_TAX_blast_file = "/srv/whitlam/bio/db/Silva/QIIME_files/rep_set/silva_104_rep_set.fasta";
+our $SILVA_imputed_file = "/srv/whitlam/bio/db/Silva/QIIME_files/core_aligned_set/core_Silva_aligned.fasta";
 our $CHIME_good_file = "good.fasta";
 our $CHIME_bad_file = "ch.fasta";
 our $ACACIA_out_file = "acacia_out__all_tags.seqOut";

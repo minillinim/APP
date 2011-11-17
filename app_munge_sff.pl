@@ -344,7 +344,7 @@ __DATA__
 
 =head1 SYNOPSIS
 
-    app_do_QA.pl -p|prefix SFF_PREFIX [-cleanup] [-help|h]
+    app_munge_sff.pl -p|prefix SFF_PREFIX [-cleanup] [-help|h]
 
       -p SFF_PREFIX                Prefix of the sff, mapping, qual files etc..
       [-cleanup]                   Remove all temp files made.

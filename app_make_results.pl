@@ -70,6 +70,9 @@ makeResultsDirs(0);
 my %global_samp_ID_list = ();
 my $global_num_samples = 0;
 
+# we can compare sequences to the greengenes or the SILVA dbs
+my $global_comp_DB_type = "GG";
+
 # there are a number of different ways to normalise
 # by default don'r normalise
 my $global_norm_style = "NONE";
@@ -84,7 +87,7 @@ my $global_rare_M = 50;
 # This is made dynamic in parse below
 my $global_rare_X = -1;
 my $global_rare_S = 50;
-my $global_rare_N = 10;
+my $global_rare_N = 50;
 
 my $global_min_sample_size = 100000000000;
 my $global_max_sample_size = -1;
@@ -104,6 +107,18 @@ if(exists $options->{'e'}) { $global_e_value = $options->{'e'}; }
 
 print "Checking is all the config checks out...\t\t";
 parse_config_results();
+
+# update our databases (GG by default)
+my $TAX_tax_file = $QIIME_TAX_tax_file;
+my $TAX_blast_file = $QIIME_TAX_blast_file;
+my $imputed_file = $QIIME_imputed_file;
+
+if($global_comp_DB_type eq "SILVA")
+{
+    $TAX_tax_file = $SILVA_TAX_tax_file;
+    $TAX_blast_file = $SILVA_TAX_blast_file;
+    $imputed_file = $SILVA_imputed_file;
+}
 
 #### Start the results pipeline!
 print "All good!\n";
@@ -129,10 +144,10 @@ print "Gettting a representitive set...\n";
 # if we are doing OTU_AVERAGE (or if we've ben asked to) then we need to assign taxonomy here
 print "Assigning taxonomy for non normalised data set...\n";
 my $nn_rep_set_fasta = "$global_TB_processing_dir/".$nn_fasta_file."_rep_set.fasta";
-`assign_taxonomy.py -i $nn_rep_set_fasta -t $QIIME_TAX_tax_file -b $QIIME_TAX_blast_file -m blast -e $global_e_value -o $global_TB_processing_dir`;
+`assign_taxonomy.py -i $nn_rep_set_fasta -t $TAX_tax_file -b $TAX_blast_file -m blast -e $global_e_value -o $global_TB_processing_dir`;
 
 print "Treeing non normalised data set...\n";
-`align_seqs.py -i $nn_rep_set_fasta -t $QIIME_imputed_file -p 0.6 -o $global_TB_processing_dir/pynast_aligned`;
+`align_seqs.py -i $nn_rep_set_fasta -t $imputed_file -p 0.6 -o $global_TB_processing_dir/pynast_aligned`;
 my $nn_rep_set_aligned = "$global_TB_processing_dir/pynast_aligned/".$nn_fasta_file."_rep_set_aligned.fasta";
 `filter_alignment.py -i $nn_rep_set_aligned -o $global_TB_processing_dir`;
 my $nn_rep_set_aligned_filtered = "$global_TB_processing_dir/".$nn_fasta_file."_rep_set_aligned_pfiltered.fasta";
@@ -235,10 +250,10 @@ if($global_norm_style eq "SEQ")
     # if we are doing OTU_AVERAGE (or if we've ben asked to) then we need to assign taxonomy here
     print "Assigning taxonomy for SEQ normalised data set...\n";
     my $sn_rep_set_fasta = "$global_SB_processing_dir/".$sn_fasta_file."_rep_set.fasta";
-    `assign_taxonomy.py -i $sn_rep_set_fasta -t $QIIME_TAX_tax_file -b $QIIME_TAX_blast_file -m blast -e $global_e_value -o $global_SB_processing_dir`;
+    `assign_taxonomy.py -i $sn_rep_set_fasta -t $TAX_tax_file -b $TAX_blast_file -m blast -e $global_e_value -o $global_SB_processing_dir`;
     
     print "Treeing SEQ normalised data set...\n";
-    `align_seqs.py -i $sn_rep_set_fasta -t $QIIME_imputed_file -p 0.6 -o $global_SB_processing_dir/pynast_aligned`;
+    `align_seqs.py -i $sn_rep_set_fasta -t $imputed_file -p 0.6 -o $global_SB_processing_dir/pynast_aligned`;
     my $sn_rep_set_aligned = "$global_SB_processing_dir/pynast_aligned/".$sn_fasta_file."_rep_set_aligned.fasta";
     `filter_alignment.py -i $sn_rep_set_aligned -o $global_SB_processing_dir`;
     my $sn_rep_set_aligned_filtered = "$global_SB_processing_dir/".$sn_fasta_file."_rep_set_aligned_pfiltered.fasta";
@@ -570,7 +585,14 @@ sub parse_config_results
         my @fields = split /=/, $_;
         if($#fields > 0)
         {
-            if($fields[0] eq "NORMALISE")
+            if($fields[0] eq "DB")
+            {
+               if($fields[1] eq "SILVA")
+                {
+                    $global_comp_DB_type = "SILVA";
+                } 
+            }
+            elsif($fields[0] eq "NORMALISE")
             {
                 # is this guy set?
                 if($fields[1] ne "")

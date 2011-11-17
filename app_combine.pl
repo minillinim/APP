@@ -178,7 +178,14 @@ foreach my $job (keys %global_job_list)
     close $conf_fh;
 }
 
-print $new_conf_fh "$FNA_FOOTER\n";
+if(exists options->{'SILVA'})
+{
+    print $new_conf_fh "$FNA_SILVA_FOOTER\n";
+}
+else
+{
+    print $new_conf_fh "$FNA_FOOTER\n";
+}
 close $new_conf_fh;
 
 #### start the $QA_dir pipeline!
@@ -287,7 +294,7 @@ sub recombine_fnas
 # TEMPLATE SUBS
 ######################################################################
 sub checkParams {
-    my @standard_options = ( "help|h+", "jobs|j:s", "output|o:s",  "acacia_conf:s");
+    my @standard_options = ( "help|h+", "jobs|j:s", "output|o:s",  "acacia_conf:s", "SILVA+");
     my %options;
 
     # Add any other command line options, and the code to handle them
@@ -351,11 +358,12 @@ __DATA__
 
 =head1 SYNOPSIS
 
-    app_combine.pl -jobs|j JOB_ID[.SAMPLE_ID],JOB_ID[.SAMPLE_ID][,JOB_ID[.SAMPLE_ID][,...]] [-acacia_conf CONFIG_FILE] [-output|o FOLDER] [-help|h]
+    app_combine.pl -jobs|j JOB_ID[.SAMPLE_ID],JOB_ID[.SAMPLE_ID][,JOB_ID[.SAMPLE_ID][,...]] [-acacia_conf CONFIG_FILE] [-output|o FOLDER] [-SILVA] [-help|h]
 
       -jobs -j                      APP job folders and possibly sample numbers (must be at aleast two)
       [-acacia_conf CONFIG_FILE]    Alternate acacia config file (Full path!)
       [-output|o FOLDER]            Folder to write the results to [default: ac]
+      [-SILVA]                      Use the SILVA database
       [-help -h]                    Displays basic usage information
       
       NOTES:
