@@ -178,7 +178,7 @@ foreach my $job (keys %global_job_list)
     close $conf_fh;
 }
 
-if(exists options->{'SILVA'})
+if(exists $options->{'SILVA'})
 {
     print $new_conf_fh "$FNA_SILVA_FOOTER\n";
 }
