@@ -39,6 +39,7 @@ use Getopt::Long;
 #CPAN modules
 
 #locally-written modules
+use AppPrimers;
 
 BEGIN {
     select(STDERR);
@@ -106,12 +107,6 @@ print "dilutant_tube_position: $global_dilutant_tube_position\n";
 print "dilutant_minimum_volume: $global_dilutant_minimum_volume uL\n";
 print "dilutant_tube_capacity: $global_dilutant_tube_capacity uL\n";
 
-# we need to know the length of the primers for mixed data sets (bp)
-my %global_prim_len_hash = ();
-$global_prim_len_hash{'pyroL803Fmix'} = 688;
-$global_prim_len_hash{'pyroL926F'} = 565;
-$global_prim_len_hash{'1114'} = 500;
-
 # but which primers have we seen?
 my %global_seen_primers_hash = ();
 
@@ -154,15 +149,15 @@ while(<$global_input_fh>)
     }
     
     # check we know this primer:
-    if(!exists $global_prim_len_hash{$line_fields[2]})
+    if(!exists $APP_prim_len_hash{$line_fields[2]})
     {
         die "**ERROR: Unkown primer: \"$line_fields[2]\"\n";
     }
     
     # for now, just take the specified concentrations and store the primer
     $global_well_conc_hash{$line_fields[0]} = $line_fields[1];
-    $global_well_primer_hash{$line_fields[0]} = $global_prim_len_hash{$line_fields[2]};
-    $global_seen_primers_hash{$line_fields[2]} = $global_prim_len_hash{$line_fields[2]};
+    $global_well_primer_hash{$line_fields[0]} = $APP_prim_len_hash{$line_fields[2]};
+    $global_seen_primers_hash{$line_fields[2]} = $APP_prim_len_hash{$line_fields[2]};
 }
 # close the input file
 close $global_input_fh;

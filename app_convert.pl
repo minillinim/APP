@@ -32,6 +32,7 @@ use Getopt::Long;
 #CPAN modules
 
 #locally-written modules
+use AppPrimers;
 
 BEGIN {
     select(STDERR);
@@ -54,22 +55,16 @@ if(exists $options->{'out'}) { $global_output_filename = $options->{'out'}; }
 my $global_dilution_multiplier = 1;
 if(exists($options->{'dilution'})) { $global_dilution_multiplier = $options->{'dilution'}; }
 
-# allowable primer lengths
-my %global_prim_len_hash = ();
-$global_prim_len_hash{'pyroL803Fmix'} = 688;
-$global_prim_len_hash{'pyroL926F'} = 565;
-$global_prim_len_hash{'1114'} = 500;
-
 # tollerances
 my $global_tolerance = 0.1;
 print $options->{'tolerance'}."\n";
 if(exists($options->{'tolerance'})) { $global_tolerance = $options->{'tolerance'}; }
 my %global_prim_len_upper_hash = ();
 my %global_prim_len_lower_hash = ();
-foreach my $primer (keys %global_prim_len_hash)
+foreach my $primer (keys %APP_prim_len_hash)
 {
-    $global_prim_len_upper_hash{$primer} = int($global_prim_len_hash{$primer} * (1 + $global_tolerance));
-    $global_prim_len_lower_hash{$primer} = int($global_prim_len_hash{$primer} * (1 - $global_tolerance));
+    $global_prim_len_upper_hash{$primer} = int($APP_prim_len_hash{$primer} * (1 + $global_tolerance));
+    $global_prim_len_lower_hash{$primer} = int($APP_prim_len_hash{$primer} * (1 - $global_tolerance));
 }
 
 # used primer lengths
@@ -87,7 +82,7 @@ while(<$pdb_fh>)
 {
     chomp $_;
     my @line_fields = split /,/, $_;
-    if(exists($global_prim_len_hash{$line_fields[1]}))
+    if(exists($APP_prim_len_hash{$line_fields[1]}))
     {
         $global_well_primer_hash{$line_fields[0]} = $line_fields[1];
     }
@@ -126,7 +121,7 @@ while(<$in_fh>)
                 {
                     print "WARNING: Two possible concentration values for well $well.\n";
                     print "\tLast time:\t{$global_well_len_hash{$well} AT $global_well_conc_hash{$well}}\n";
-                    print "\tThis time:\t{$line_fields[2] AT $line_fields[3], primer: $primer, length: $global_prim_len_hash{$primer}\n";
+                    print "\tThis time:\t{$line_fields[2] AT $line_fields[3], primer: $primer, length: $APP_prim_len_hash{$primer}\n";
                     if($line_fields[3] > $global_well_conc_hash{$well})
                     {
                         $global_well_conc_hash{$well} = $line_fields[3];
