@@ -34,6 +34,7 @@ our %APP_prim_len_hash = ();
 $APP_prim_len_hash{'pyroL803Fmix'} = 688;
 $APP_prim_len_hash{'pyroL926F'} = 565;
 $APP_prim_len_hash{'1114'} = 500;
-
+$APP_prim_len_hash{'pyroLSSU926F'} = 565;
+$APP_prim_len_hash{'pyroLSSU803F'} = 688;
 
 1;
