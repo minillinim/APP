@@ -57,7 +57,6 @@ if(exists($options->{'dilution'})) { $global_dilution_multiplier = $options->{'d
 
 # tollerances
 my $global_tolerance = 0.1;
-print $options->{'tolerance'}."\n";
 if(exists($options->{'tolerance'})) { $global_tolerance = $options->{'tolerance'}; }
 my %global_prim_len_upper_hash = ();
 my %global_prim_len_lower_hash = ();
@@ -81,6 +80,7 @@ open my $pdb_fh, "<", $options->{'pdbe'} or die $!;
 while(<$pdb_fh>)
 {
     chomp $_;
+    next if($_ eq "");
     my @line_fields = split /,/, $_;
     if(exists($APP_prim_len_hash{$line_fields[1]}))
     {
