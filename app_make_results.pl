@@ -75,7 +75,7 @@ my $global_comp_DB_type = "GG";
 
 # there are a number of different ways to normalise
 # by default don'r normalise
-my $global_norm_style = "NONE";
+my $global_norm_style = "TABLE";
 my $global_norm_sample_size = 0;
 
 # how many times are we going to resample sequences (by default)
@@ -426,7 +426,7 @@ sub find_centroid_table
     close $dist_fh;
         
     # let the user know the result
-    return $centroid_otu_index;     
+    return $centroid_otu_index - 1;     
 }
 
 sub find_centroid_sequences
@@ -602,9 +602,9 @@ sub parse_config_results
                     $global_norm_style = $norm_fields[0];
 
                     # check the normailisation style is sane
-                    if($global_norm_style ne "SEQ")
+                    if($global_norm_style ne "SEQ" and $global_norm_style ne "TABLE")
                     {
-                        die "You must specify 'SEQ' as normalisation methods (if you specify anything)\n";
+                        die "You must specify 'SEQ' or 'TABLE' as normalisation methods (if you specify anything)\n";
                     }
 
                     # see if the user decided on how many sequences to normalise to!
