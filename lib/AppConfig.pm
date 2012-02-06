@@ -369,7 +369,7 @@ sub denoise
     #
     print "Denoising using acacia...\n";
 #    `java -XX:+UseConcMarkSweepGC -Xmx10G -jar \$ACACIA -c $global_acacia_config`;
-    `java -jar \$ACACIA -c $global_acacia_config`;
+    `java -XX:+UseConcMarkSweepGC -Xmx10G -jar \$ACACIA -c $global_acacia_config`;
     `sed -i -e "s/all_tags_[^ ]* //" $global_acacia_output_dir/$ACACIA_out_file`;
 }
 
