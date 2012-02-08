@@ -138,7 +138,7 @@ print "----------------------------------------------------------------\n";
 print "Start TABLE BASED NORMALISATION data set processing...\n";
 print "----------------------------------------------------------------\n";
 print "Copying reads for analysis...\n";
-copy_read_subset("$global_QA_dir/denoised_acacia/$ACACIA_out_file","$global_TB_processing_dir/$nn_fasta_file");
+copy_read_subset("$global_QA_dir/$global_acacia_output_dir/$ACACIA_out_file","$global_TB_processing_dir/$nn_fasta_file");
 
 print "Picking OTUs for non normalised data set...\n";
 `pick_otus.py -i $global_TB_processing_dir/$nn_fasta_file -s $global_similarity_setting -o $global_TB_processing_dir/uclust_picked_otus`;
