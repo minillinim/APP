@@ -74,7 +74,7 @@ my $global_num_samples = 0;
 my $global_comp_DB_type = "GG";
 
 # there are a number of different ways to normalise
-# by default don'r normalise
+# by default don't normalise
 my $global_norm_style = "TABLE";
 my $global_norm_sample_size = 0;
 
@@ -100,6 +100,10 @@ my $global_e_value = 0.001;
 
 # how many reps to do when normalising the OTU table
 my $global_norm_num_reps = 1000;
+
+# we only need a subset of these guys to do jacknifing
+my $global_JN_file_count = 100;
+if($global_JN_file_count > $global_norm_num_reps) { $global_JN_file_count = $global_norm_num_reps - 1; } 
 
 #### Override defaults from config or user
 if(exists $options->{'identity'}) { $global_similarity_setting = $options->{'identity'}; }
@@ -133,7 +137,8 @@ $global_R_instance->start();
 print "----------------------------------------------------------------\n";
 print "Start TABLE BASED NORMALISATION data set processing...\n";
 print "----------------------------------------------------------------\n";
-`cp $global_QA_dir/denoised_acacia/acacia_out__all_tags.seqOut $global_TB_processing_dir/$nn_fasta_file`;
+print "Copying reads for analysis...\n";
+copy_read_subset("$global_QA_dir/denoised_acacia/$ACACIA_out_file","$global_TB_processing_dir/$nn_fasta_file");
 
 print "Picking OTUs for non normalised data set...\n";
 `pick_otus.py -i $global_TB_processing_dir/$nn_fasta_file -s $global_similarity_setting -o $global_TB_processing_dir/uclust_picked_otus`;
@@ -174,6 +179,7 @@ print "Normalizing non normalised table at $global_norm_sample_size sequences...
 `multiple_rarefactions_even_depth.py -i $nn_otu_table_file -o $global_TB_processing_dir/rare_tables/ -d $global_norm_sample_size -n $global_norm_num_reps --lineages_included --k`;
 
 my $centroid_index = find_centroid_table("$global_TB_processing_dir/rare_tables/", $global_norm_sample_size, $tn_dist_file, $tn_log_file);
+
 my $cp_str = "cp $global_TB_processing_dir/rare_tables/rarefaction_$global_norm_sample_size"."_$centroid_index".".txt $tn_otu_table_file";
 `$cp_str`;
 
@@ -183,7 +189,7 @@ print "Summarizing by taxa.....\n";
 # move 100 of the 100 tables just produced into a new folder for jacknifing
 my $jack_knife_folder = "$global_TB_processing_dir/rare_tables/JN";
 `mkdir -p $jack_knife_folder`;
-foreach my $jn_file_counter (0..99)
+foreach my $jn_file_counter (0..$global_JN_file_count)
 {
     my $jn_from_file = "rarefaction_".$global_norm_sample_size."_".$jn_file_counter.".txt";
     `cp $global_TB_processing_dir/rare_tables/$jn_from_file $jack_knife_folder/`;
@@ -344,6 +350,16 @@ sub jack_knifing
 
 }
 
+sub run_R_cmd
+{
+    #-----
+    # Wrapper for running R commands
+    #
+    my ($cmd) = @_;
+    #print "$cmd\n";
+    $global_R_instance->run($cmd);
+}
+
 sub find_centroid_table
 {
     #-----
@@ -356,40 +372,49 @@ sub find_centroid_table
     $global_R_instance->start();
 
     my $sampl_p1 = $global_num_samples + 1;
-    
+
     # read in the list of distance matricies
-    $global_R_instance->run(qq`library(foreign);`);
-    $global_R_instance->run(qq`a<-list.files("$path", "*.txt");`);
+    run_R_cmd(qq`library(foreign);`);
+    run_R_cmd(qq`a<-list.files("$path", "*.txt");`);
     
     # work out how many there are and allocate an array
-    $global_R_instance->run(qq`len_a <- length(a);`);
-    $global_R_instance->run(qq`big_frame <- array(0,dim=c($global_num_samples,$global_num_samples,len_a));`);
+    run_R_cmd(qq`len_a <- length(a);`);
+    run_R_cmd(qq`big_frame <- array(0,dim=c($global_num_samples,$global_num_samples,len_a));`);
+    
+    print "  --start loading data...\n";
     
     # load each file individually into a big frame
     my $r_str = "for (i in c(1:len_a)) { j <- i - 1; name <- paste(\"$path\",\"rarefaction_$norm_size\",\"_\",j,\".txt\",sep=\"\"); u<-read.table(name,sep=\"\\t\",row.names=1); u[,$sampl_p1]<-NULL; big_frame[,,i]<-as.matrix(dist(t(u), upper=TRUE, diag=TRUE)); i<-i+1; }";
-    $global_R_instance->run($r_str);    
+    run_R_cmd($r_str);    
 
+    print "  --data loaded, calculating centroid...\n";
+    
     # find the average matrix
-    $global_R_instance->run(qq`ave <- big_frame[,,1];`);
-    $global_R_instance->run(qq`for (i in c(2:len_a)) { ave <- ave + big_frame[,,i]; }`);
-    $global_R_instance->run(qq`ave <- ave/len_a;`);
+    run_R_cmd(qq`ave <- big_frame[,,1];`);
+    run_R_cmd(qq`for (i in c(2:len_a)) { ave <- ave + big_frame[,,i]; }`);
+    run_R_cmd(qq`ave <- ave/len_a;`);
+    
+    print "  --calculating didtances of tables to centroid...\n";
     
     # find the euclidean distance of each matrix from the average
-    $global_R_instance->run(qq`dist<-array(0,dim=c(len_a));`);
-    $global_R_instance->run(qq`for (i in c(1:len_a)) { dist[i] <- sqrt(sum(big_frame[,,i]-ave)^2); }`);
+    run_R_cmd(qq`dist<-array(0,dim=c(len_a));`);
+    run_R_cmd(qq`for (i in c(1:len_a)) { dist[i] <- sqrt(sum(big_frame[,,i]-ave)^2); }`);
     
     # find the min value
-    $global_R_instance->run(qq`min_index <- which.min(dist);`);
+    run_R_cmd(qq`min_index <- which.min(dist);`);
     my $centroid_otu_index = $global_R_instance->get('min_index');
+    # R indexes from 0
+    $centroid_otu_index--;
+    print "  --table: $centroid_otu_index is the centroid table\n";
     
     # make stats on the distances
     # and log what we did
     open my $log_fh, ">", $log_file or die "Could not open log file: $log_file : $!\n";
-    $global_R_instance->run(qq`max_dist <- max(dist);`);
-    $global_R_instance->run(qq`min_dist <- min(dist);`);
-    $global_R_instance->run(qq`range_dist <- max_dist - min_dist;`);
-    $global_R_instance->run(qq`mean_dist <- mean(dist);`);
-    $global_R_instance->run(qq`median_dist <- median(dist);`);
+    run_R_cmd(qq`max_dist <- max(dist);`);
+    run_R_cmd(qq`min_dist <- min(dist);`);
+    run_R_cmd(qq`range_dist <- max_dist - min_dist;`);
+    run_R_cmd(qq`mean_dist <- mean(dist);`);
+    run_R_cmd(qq`median_dist <- median(dist);`);
     
     print $log_fh "---------------------------------------------------\n";
     print $log_fh "  Centroid OTU table based normalised statistics\n";
@@ -402,11 +427,11 @@ sub find_centroid_table
   
     if(2 < $global_num_samples)
     {
-        $global_R_instance->run(qq`library(permute);`);
-        $global_R_instance->run(qq`library(vegan);`);
-        $global_R_instance->run(qq`mantel.otu <- mantel(ave,big_frame[,,min_index]);`);
-        $global_R_instance->run(qq`m_stat <- mantel.otu\$statistic;`);
-        $global_R_instance->run(qq`m_sig <- mantel.otu\$signif;`);
+        run_R_cmd(qq`library(permute);`);
+        run_R_cmd(qq`library(vegan);`);
+        run_R_cmd(qq`mantel.otu <- mantel(ave,big_frame[,,min_index]);`);
+        run_R_cmd(qq`m_stat <- mantel.otu\$statistic;`);
+        run_R_cmd(qq`m_sig <- mantel.otu\$signif;`);
         print $log_fh "Mantel P stat:\t".$global_R_instance->get('m_sig')."\n";
         print $log_fh "Mantel R stat:\t".$global_R_instance->get('m_stat')."\n";
     }
@@ -426,7 +451,7 @@ sub find_centroid_table
     close $dist_fh;
         
     # let the user know the result
-    return $centroid_otu_index - 1;     
+    return $centroid_otu_index;     
 }
 
 sub find_centroid_sequences
@@ -545,12 +570,55 @@ sub find_global_norm_sample_size
     return $global_norm_sample_size;
 }
 
+sub copy_read_subset
+{
+    #-----
+    # copy over the denoised reads into the processing dir
+    # only take reads whose IDs are in the $global_samp_ID_list
+    #
+    my($source_fasta, $target_fasta) = @_;
+    open my $s_fh, "<", $source_fasta or die "**ERROR: could not open file: $source_fasta $!\n";
+    open my $t_fh, ">", $target_fasta or die "**ERROR: could not open file: $target_fasta $!\n";
+    my $good_seq = 0;
+    my %seen_seqs = ();
+    while(<$s_fh>)
+    {
+        if($_ =~ /^>/)
+        {
+            # header
+            my @components = split / /, $_;
+            # we need to ignore this guy if he's a duplicate
+            if(!exists $seen_seqs{$components[0]})
+            {
+                my $header = $components[0];
+                $header =~ s/>([^_]*)_.*/$1/;
+                if(1 == $global_samp_ID_list{$header})
+                {
+                    $good_seq = 1;
+                    print $t_fh $_;
+                }
+                $seen_seqs{$components[0]} = 1;
+            }
+        }
+        elsif(1 == $good_seq)
+        {
+            print $t_fh $_;
+            $good_seq = 0;
+        }
+    }
+    close $s_fh;
+    close $t_fh;
+}
+
 sub parse_config_results
 {
     #-----
     # parse the app config file and produce a qiime mappings file
     #
     open my $conf_fh, "<", $options->{'config'} or die $!;
+    open my $mapping, ">", $global_mapping_file or die $!;
+    print $mapping "$FNB_HEADER\n";
+
     while(<$conf_fh>)
     {
         next if($_ =~ /^#/);
@@ -574,8 +642,10 @@ sub parse_config_results
             {
                 $global_min_sample_size = $sample_size;
             }
+            print $mapping "$fields[$FNA{'SampleID'}]\t$fields[$FNA{'BarcodeSequence'}]\t$fields[$FNA{'LinkerPrimerSequence'}]\t$fields[$FNA{'Description'}]\n";
         }
     }
+    close $mapping;
     
     print "\t...Processing $global_num_samples samples\n";
     # user options section

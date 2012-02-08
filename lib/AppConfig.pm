@@ -59,6 +59,7 @@ our @EXPORT=qw(
     $global_SB_processing_dir
     $global_TB_results_dir
     $global_SB_results_dir
+    $ACACIA_out_file
     $tn_log_file
     $sn_log_file
     $tn_dist_file
@@ -193,7 +194,7 @@ our $SILVA_TAX_blast_file = "/srv/whitlam/bio/db/Silva/QIIME_files/rep_set/silva
 our $SILVA_imputed_file = "/srv/whitlam/bio/db/Silva/QIIME_files/core_aligned_set/core_Silva_aligned.fasta";
 our $CHIME_good_file = "good.fasta";
 our $CHIME_bad_file = "ch.fasta";
-our $ACACIA_out_file = "acacia_out__all_tags.seqOut";
+our $ACACIA_out_file = "acacia_out_all_tags.seqOut";
 
 #
 # Some global variables we use to store read counts and sample IDs
@@ -370,7 +371,7 @@ sub denoise
     print "Denoising using acacia...\n";
 #    `java -XX:+UseConcMarkSweepGC -Xmx10G -jar \$ACACIA -c $global_acacia_config`;
     `java -XX:+UseConcMarkSweepGC -Xmx10G -jar \$ACACIA -c $global_acacia_config`;
-    `sed -i -e "s/all_tags_[^ ]* //" $global_acacia_output_dir/$ACACIA_out_file`;
+    #`sed -i -e "s/all_tags_[^ ]* //" $global_acacia_output_dir/$ACACIA_out_file`;
 }
 
 sub getReadCounts
@@ -421,7 +422,7 @@ sub getReadCounts
         }
     }    
 
-    open $tmp_fh, "<", "$global_acacia_output_dir/$ACACIA_out_file" or die $!;
+    open $tmp_fh, "<", "$global_acacia_output_dir/$ACACIA_out_file" or die "Could not open file: $global_acacia_output_dir/$ACACIA_out_file $!";
     while(<$tmp_fh>)
     {
         next if(!($_ =~ /^>/));
