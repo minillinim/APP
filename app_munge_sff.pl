@@ -57,6 +57,9 @@ my $global_raw_sff_gz = $options->{'prefix'}.".sff.gz";
 my $global_raw_fna_gz = $options->{'prefix'}.".fna.gz";
 my $global_raw_qual_gz = $options->{'prefix'}.".qual.gz";
 my $global_raw_mapping = $options->{'prefix'}.".pdbm";
+my $global_min_seq_length = 200;
+
+if(exists $options->{'seq_length'}) { $global_min_seq_length = $options->{'seq_length'}; }
 
 my $global_can_remove_fna = 1;
 
@@ -94,7 +97,7 @@ else
     die;
 }
 
-my $global_split_args = "split_libraries.py -b variable_length -m $global_raw_mapping -f $global_raw_fna -a 2 -H 10 -M 1";
+my $global_split_args = "split_libraries.py -b variable_length -m $global_raw_mapping -f $global_raw_fna -a 2 -H 10 -M 1 -l $global_min_seq_length";
 
 #### Check to see if sffinfo needs to be called
 print "Checking whether we need to split up the sff file\n";
@@ -280,7 +283,7 @@ sub split_fna_by_job
 # TEMPLATE SUBS
 ######################################################################
 sub checkParams {
-    my @standard_options = ( "help|h+", "prefix|p:s", "cleanup:s");
+    my @standard_options = ( "help|h+", "prefix|p:s", "cleanup:s", "seq_length|l:i");
     my %options;
 
     # Add any other command line options, and the code to handle them
@@ -344,9 +347,10 @@ __DATA__
 
 =head1 SYNOPSIS
 
-    app_munge_sff.pl -p|prefix SFF_PREFIX [-cleanup] [-help|h]
+    app_munge_sff.pl -p|prefix SFF_PREFIX [-cleanup] [-help|h] [-seq_length|l LENGTH]
 
       -p SFF_PREFIX                Prefix of the sff, mapping, qual files etc..
+      -seq_length -l LENGTH        Minimum sequence length to keep
       [-cleanup]                   Remove all temp files made.
       [-help -h]                   Displays basic usage information
          

@@ -151,6 +151,7 @@ foreach my $base_dir (@otu_search_dirs)
 print "Making OTU PCA (etc...) images\n";
 foreach my $this_otu (keys %global_otu_table_list)
 {
+    print "$this_otu, $global_otu_table_list{$this_otu}, 0\n";
     make_otu_images($this_otu, $global_otu_table_list{$this_otu}, 0);
 }
 
