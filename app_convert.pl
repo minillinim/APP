@@ -30,6 +30,7 @@ use warnings;
 use Getopt::Long;
 
 #CPAN modules
+use Data::Dumper;
 
 #locally-written modules
 use AppPrimers;
@@ -81,7 +82,7 @@ while(<$pdb_fh>)
 {
     chomp $_;
     next if($_ eq "");
-    my @line_fields = split /,/, $_;
+    my @line_fields = split(/,/, $_);
     if(exists($APP_prim_len_hash{$line_fields[1]}))
     {
         $global_well_primer_hash{$line_fields[0]} = $line_fields[1];
@@ -93,7 +94,7 @@ while(<$pdb_fh>)
 }
 close $pdb_fh;
 
-# open the input file
+# open the in file
 open my $in_fh, "<", $options->{'caliper'} or die "Cannot open input file $!";
 # kill the header
 <$in_fh>;
@@ -101,7 +102,7 @@ open my $in_fh, "<", $options->{'caliper'} or die "Cannot open input file $!";
 while(<$in_fh>)
 {
     chomp $_;
-    my @line_fields = split /,/, $_;
+    my @line_fields = split(/,/, $_);
     next if($line_fields[1] =~ /^Ladd/);
     next if($line_fields[2] eq "");
     

@@ -183,11 +183,13 @@ our $global_barcode_length = "variable_length";
 #
 # Some programs make special output files. Store these filenames here
 #
+our $QIIME_GG_TAX_ROOT = "/srv/whitlam/bio/db/gg/qiime_default/gg_otus_4feb2011";
+
 our $QIIME_map_file = "qiime_mapping.txt";
 our $QIIME_split_out = "seqs.fna";
 our $QIIME_split_out_qual = "seqs_filtered.qual";
-our $QIIME_TAX_tax_file = "/srv/whitlam/bio/db/gg/qiime_default/gg_otus_6oct2010/taxonomies/otu_id_to_greengenes.txt";
-our $QIIME_TAX_blast_file = "/srv/whitlam/bio/db/gg/qiime_default/gg_otus_6oct2010/rep_set/gg_97_otus_6oct2010.fasta";
+our $QIIME_TAX_tax_file = "$QIIME_GG_TAX_ROOT/taxonomies/greengenes_tax.txt";
+our $QIIME_TAX_blast_file = "$QIIME_GG_TAX_ROOT/rep_set/gg_99_otus_4feb2011.fasta";
 our $QIIME_imputed_file = "/srv/whitlam/bio/db/gg/qiime_default/core_set_aligned.fasta.imputed";
 our $SILVA_TAX_tax_file = "/srv/whitlam/bio/db/Silva/QIIME_files/taxonomy_mapping/Silva_taxa_mapping_104set_97_otus.txt";
 our $SILVA_TAX_blast_file = "/srv/whitlam/bio/db/Silva/QIIME_files/rep_set/silva_104_rep_set.fasta";
